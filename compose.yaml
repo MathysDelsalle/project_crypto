@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  bd:
+    build:
+      context: ./bd          # tu as un Dockerfile + init.sql ici
+    container_name: bd
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./api
+    container_name: api
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://bd:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SERVER_PORT: 8080
+    depends_on:
+      - bd
+    ports:
+      - "8080:8080"
+
+  #front:
+  #  build:
+  #   context: ./front
+  #  container_name: front
+  #  environment:
+  #    VITE_API_BASE_URL: "http://localhost:8080/api"
+  #  depends_on:
+  #    - api
+  #  ports:
+  #    - "3000:3000"
+
+  collector:
+    build:
+      context: ./collector
+    container_name: collector
+    environment:
+      COINGECKO_API_URL: ${COINGECKO_API_URL}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://bd:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      - bd
+      - api
+
+volumes:
+  db_data:

@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://bd:5432/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+coingecko:
+  api:
+    url: ${COINGECKO_API_URL:https://api.coingecko.com/api/v3}
