@@ -1,0 +1,5 @@
+API/ Back "SPRING"
+SGDB PostgreSql
+API EXT : coinGekko
+Front React avec Vite
+
