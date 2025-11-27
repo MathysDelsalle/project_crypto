@@ -26,5 +26,7 @@ public class CryptoAsset {
 
     private Double totalVolume;
 
+    private Double price_change_24h; 
+
     private String imageUrl;
 }

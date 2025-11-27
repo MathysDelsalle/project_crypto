@@ -68,6 +68,7 @@ public class CoinGeckoCollectorService {
                 asset.setCurrentPrice(coin.getCurrent_price());
                 asset.setMarketCap(coin.getMarket_cap());
                 asset.setTotalVolume(coin.getTotal_volume());
+                asset.setPrice_change_24h(coin.getPrice_change_24h());
                 asset.setImageUrl(coin.getImage());
 
                 cryptoAssetRepository.save(asset);
