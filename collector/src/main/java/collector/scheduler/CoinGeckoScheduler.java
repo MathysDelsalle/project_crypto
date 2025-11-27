@@ -19,7 +19,7 @@ public class CoinGeckoScheduler {
      * @schedule (fixedRate = x): permet de définir un scheduler interne a Spring qui execute la commande tout les x ms 
      * 
      */
-    @Scheduled(fixedRate = 15000)// toutes les 15 secondes 
+    @Scheduled(fixedRate = 30_000)// toutes les 15 secondes 
     public void runCollection() {
         log.info("Collecte CoinGecko démarrée par le scheduler.");
         try {
