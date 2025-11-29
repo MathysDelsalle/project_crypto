@@ -7,6 +7,6 @@ import java.util.Optional;
 
 public interface CryptoAssetRepository extends JpaRepository<CryptoAsset, Long> {
 
-    // Permet de retrouver une crypto par son symbole (ex: BTC)
-    Optional<CryptoAsset> findBySymbol(String symbol);
+    // Permet de retrouver une crypto par son nom (ex: Bitcoin)
+    Optional<CryptoAsset> findByExternalId(String ExternalId);
 }

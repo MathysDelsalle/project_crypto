@@ -55,7 +55,7 @@ public class CoinGeckoCollectorService {
             try {
                 // On cherche d'abord si la crypto existe déjà (par symbol ou id CoinGecko)
                 CryptoAsset asset = cryptoAssetRepository
-                        .findBySymbol(coin.getSymbol())
+                        .findByExternalId(coin.getId())
                         .orElseGet(CryptoAsset::new);
 
                 if (asset.getId() == null) {
