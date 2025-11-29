@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://bd:5432/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: none   # la base existe déjà (collector + init.sql)
+    show-sql: true
+
+server:
+  port: 8080
