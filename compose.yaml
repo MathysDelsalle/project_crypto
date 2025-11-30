@@ -3,7 +3,7 @@ version: "3.9"
 services:
   bd:
     build:
-      context: ./bd          # tu as un Dockerfile + init.sql ici
+      context: ./bd         
     container_name: bd
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -28,16 +28,16 @@ services:
     ports:
       - "8080:8080"
 
-  #front:
-  #  build:
-  #   context: ./front
-  #  container_name: front
-  #  environment:
-  #    VITE_API_BASE_URL: "http://localhost:8080/api"
-  #  depends_on:
-  #    - api
-  #  ports:
-  #    - "3000:3000"
+  front:
+    build:
+     context: ./front
+    container_name: front
+    environment:
+      VITE_API_BASE_URL: "http://localhost:8080/api"
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
 
   collector:
     build:
