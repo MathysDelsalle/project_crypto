@@ -7,6 +7,11 @@ spring:
     hibernate:
       ddl-auto: none   # la base existe déjà (collector + init.sql)
     show-sql: true
+  
 
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
 server:
   port: 8080
