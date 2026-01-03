@@ -50,9 +50,9 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
+            <version>1.18.30</version>
+            <scope>provided</scope>
         </dependency>
-
         <!-- Tests (optionnel mais propre) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
