@@ -46,22 +46,36 @@ public class AuthService {
 
         userRepository.save(user);
         var jwtToken = jwtService.generateToken(user);
-        return AuthResponse.builder().token(jwtToken).build();
+        return AuthResponse.builder()
+        .token(jwtToken)
+        .username(user.getUsername())
+        .roles(user.getRoles().stream().map(Role::getName).toList())
+        .build();
     }
 
     public AuthResponse login(LoginRequest request) {
-        // Authentifie l'utilisateur
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
-                )
-        );
-        // Génère un token JWT
-        var user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé."));
-        var jwtToken = jwtService.generateToken(user);
-        return AuthResponse.builder().token(jwtToken).build();
-    }
+    String identifier = request.getUsername();
+
+    // 1) Trouver l'utilisateur par username OU email
+    var user = userRepository.findByUsername(identifier)
+            .or(() -> userRepository.findByEmail(identifier))
+            .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé."));
+
+    // 2) Authentifier avec le username réel (celui attendu par Spring Security)
+    authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(
+                    user.getUsername(),
+                    request.getPassword()
+            )
+    );
+
+    // 3) Générer le token
+    var jwtToken = jwtService.generateToken(user);
+    return AuthResponse.builder()
+        .token(jwtToken)
+        .username(user.getUsername())
+        .roles(user.getRoles().stream().map(Role::getName).toList())
+        .build();
+}
 }
 
