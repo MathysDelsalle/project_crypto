@@ -70,6 +70,7 @@ public class CoinGeckoCollectorService {
                 asset.setTotalVolume(coin.getTotal_volume());
                 asset.setPrice_change_24h(coin.getPrice_change_24h());
                 asset.setImageUrl(coin.getImage());
+                asset.setMarketCapRank(coin.getMarket_cap_rank());
 
                 cryptoAssetRepository.save(asset);
             } catch (Exception e) {

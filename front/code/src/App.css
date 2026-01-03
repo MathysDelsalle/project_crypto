@@ -117,3 +117,9 @@
   border-color: #1d4ed8;
   color: white;
 }
+.rank {
+  text-align: center;
+  font-weight: bold;
+  color: #6366f1;
+  width: 80px;
+}

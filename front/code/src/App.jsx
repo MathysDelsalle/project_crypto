@@ -9,7 +9,7 @@ export default function App() {
 
   // tri
   const [sortConfig, setSortConfig] = useState({
-    key: null,        
+    key: "marketCapRank",        
     direction: "asc", 
   });
 
@@ -33,6 +33,7 @@ export default function App() {
           throw new Error(`Erreur HTTP: ${response.status}`);
         }
         const data = await response.json();
+        console.log('Données reçues de l\'API:', data[0]); // Affiche le premier élément pour voir la structure
 
         if (!isCancelled) {
           setCryptos(data);
@@ -93,19 +94,19 @@ export default function App() {
     return data;
   }, [cryptos, sortConfig]);
 
-  //pages avec 50 elt par page
+  //pages avec 25 elt par page
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(sortedCryptos.length / ITEMS_PER_PAGE)),
     [sortedCryptos.length]
   );
-    //fait en sorte que si on a moins de 50 elt ca ne plante pas  
+    //fait en sorte que si on a moins de 25 elt ca ne plante pas  
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
 
-  //fait en sorte de n'afficher que 50 cryptos et pas 100 comme nous renvoie coin gecko
+  //fait en sorte de n'afficher que 25 cryptos et pas 100 comme nous renvoie coin gecko
   const paginatedCryptos = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -183,6 +184,9 @@ export default function App() {
         <table className="crypto-table">
           <thead>
             <tr>
+              <th className="sortable" onClick={() => handleSort("marketCapRank")}>
+                Rang <span className="sort-arrow">{getArrow("marketCapRank")}</span>
+              </th>
               <th>Logo</th>
 
               <th className="sortable" onClick={() => handleSort("name")}>
@@ -212,6 +216,7 @@ export default function App() {
           <tbody>
             {paginatedCryptos.map((c) => (
               <tr key={c.id}>
+                <td>#{c.marketCapRank}</td>
                 <td>
                   {c.imageUrl && (
                     <img
