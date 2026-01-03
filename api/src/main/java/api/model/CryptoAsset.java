@@ -29,4 +29,7 @@ public class CryptoAsset {
     private Double price_change_24h; 
 
     private String imageUrl;
+    
+    @Column(name = "market_cap_rank")
+    private Integer marketCapRank;
 }

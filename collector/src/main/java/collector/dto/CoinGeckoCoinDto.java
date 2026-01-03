@@ -13,4 +13,5 @@ public class CoinGeckoCoinDto {
     private Double total_volume;     // volume 24h
     private Double price_change_24h;  // Changement du prix en 24h
     private String image;            // URL de l'icône
+    private Integer market_cap_rank;  // Classement par market cap
 }

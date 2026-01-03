@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS crypto_assets (
     market_cap    DOUBLE PRECISION,
     total_volume  DOUBLE PRECISION,
     price_change_24h DOUBLE PRECISION,
-    image_url     TEXT
+    image_url     TEXT,
+    market_cap_rank INTEGER
 );
 
