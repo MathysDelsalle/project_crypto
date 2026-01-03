@@ -123,3 +123,174 @@
   color: #6366f1;
   width: 80px;
 }
+
+/* ======================
+   Homeboard actions
+====================== */
+.homeboard-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ======================
+   Favoris controls
+====================== */
+.favorites-controls {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.favorites-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.favorites-info {
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.favorites-warning {
+  font-size: 0.9rem;
+  color: #fca5a5;
+}
+
+.last-update {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 0.5rem;
+}
+
+/* ======================
+   Toast notification
+====================== */
+.toast {
+  position: sticky;
+  top: 12px;
+  z-index: 50;
+  margin: 0 auto;
+  max-width: 520px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: white;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+}
+
+/* ======================
+   Bouton favori (coeur)
+====================== */
+.heart-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* ======================
+   Etat vide
+====================== */
+.empty-row {
+  text-align: center;
+  padding: 16px;
+}
+
+/* Lignes cliquables */
+.crypto-row-clickable {
+  cursor: pointer;
+}
+
+.crypto-row-clickable:hover {
+  filter: brightness(1.05);
+}
+
+/* Page détails */
+.details-meta {
+  margin-top: 12px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.details-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.details-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin: 3px 0;
+}
+
+.details-label {
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.details-value {
+  font-size: 1rem;
+}
+
+.details-controls {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.details-interval {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.details-interval select {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(17, 24, 39, 0.5);
+  color: white;
+}
+
+.details-subtitle {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.chart-box {
+  width: 100%;
+}
+
+/* Comparaison */
+.compare-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.compare-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.compare-loading {
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
