@@ -3,10 +3,32 @@ spring:
     url: jdbc:postgresql://bd:5432/${DB_NAME}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
+
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+  mail:
+    host: ${SPRING_MAIL_HOST:${MAIL_HOST}}
+    port: ${SPRING_MAIL_PORT:${MAIL_PORT:587}}
+    username: ${SPRING_MAIL_USERNAME:${MAIL_USERNAME}}
+    password: ${SPRING_MAIL_PASSWORD:${MAIL_PASSWORD}}
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          # (optionnel) logs de debug SMTP si besoin
+          # debug: true
+
+app:
+  mail:
+    from: ${APP_MAIL_FROM:${MAIL_FROM:no-reply@crypto-alerts.com}}
+    frontendUrl: ${APP_MAIL_FRONTENDURL:${FRONTEND_URL:http://localhost:3000}}
 
 coingecko:
   api:

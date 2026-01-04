@@ -32,6 +32,11 @@ public class User implements UserDetails {
 
     private boolean enabled;
 
+    // ✅ solde
+    @Column(nullable = false)
+    @Builder.Default
+    private Double balance = 0.0;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_roles",

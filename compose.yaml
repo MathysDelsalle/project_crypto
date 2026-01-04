@@ -3,7 +3,7 @@ version: "3.9"
 services:
   bd:
     build:
-      context: ./bd         
+      context: ./bd
     container_name: bd
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -13,11 +13,18 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} -h localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   api:
     build:
       context: ./api
     container_name: api
+    env_file:
+      - .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://bd:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
@@ -28,15 +35,15 @@ services:
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: admin1
       ADMIN_EMAIL: admin@example.com
-
     depends_on:
-      - bd
+      bd:
+        condition: service_healthy
     ports:
       - "8080:8080"
 
   front:
     build:
-     context: ./front
+      context: ./front
     container_name: front
     environment:
       VITE_API_BASE_URL: "http://localhost:8080/api"
@@ -49,14 +56,28 @@ services:
     build:
       context: ./collector
     container_name: collector
+    env_file:
+      - .env
     environment:
       COINGECKO_API_URL: ${COINGECKO_API_URL}
       SPRING_DATASOURCE_URL: jdbc:postgresql://bd:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+
+      # ✅ Variables Spring direct => crée spring.mail.host/port/user/pass automatiquement
+      SPRING_MAIL_HOST: ${MAIL_HOST}
+      SPRING_MAIL_PORT: ${MAIL_PORT}
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
+
+      # ✅ Variables pour tes propriétés custom
+      APP_MAIL_FROM: ${MAIL_FROM}
+      APP_MAIL_FRONTENDURL: ${FRONTEND_URL}
     depends_on:
-      - bd
-      - api
+      bd:
+        condition: service_healthy
+      api:
+        condition: service_started
 
 volumes:
   db_data:

@@ -7,8 +7,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+
+import collector.repository.CryptoPriceHistoryRepository;
 import reactor.core.publisher.Mono;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 
@@ -23,10 +27,23 @@ public class CoinGeckoCollectorService {
     // Repository JPA pour enregistrer / mettre à jour les cryptos
     private final CryptoAssetRepository cryptoAssetRepository;
 
+    // Historique
+    private final CryptoPriceHistoryRepository cryptoPriceHistoryRepository;
+
     /**
-     * Récupère les cryptos depuis CoinGecko et les insère / met à jour en base.
+     * Comportement actuel (inchangé) :
+     * - met à jour crypto_assets
+     * - + écrit un point NOW dans crypto_price_history
      */
     public void collectTopMarketCoins() {
+        collectTopMarketCoins(true);
+    }
+
+    /**
+     * Variante interne:
+     * writeNowHistory=false => utile pour le bootstrap (remplit crypto_assets sans écrire NOW)
+     */
+    public void collectTopMarketCoins(boolean writeNowHistory) {
 
         Mono<CoinGeckoCoinDto[]> monoResponse = coinGeckoWebClient.get()
                 .uri(uriBuilder -> uriBuilder
@@ -48,18 +65,23 @@ public class CoinGeckoCollectorService {
             return;
         }
 
+        // Timestamp commun au run si on écrit NOW
+        Instant now = writeNowHistory
+                ? Instant.now().truncatedTo(ChronoUnit.MINUTES)
+                : null;
+
+        String vsCurrency = "usd";
+
         List<CoinGeckoCoinDto> coins = Arrays.asList(response);
         log.info("✅ {} cryptos récupérées depuis CoinGecko.", coins.size());
 
         for (CoinGeckoCoinDto coin : coins) {
             try {
-                // On cherche d'abord si la crypto existe déjà (par symbol ou id CoinGecko)
                 CryptoAsset asset = cryptoAssetRepository
                         .findByExternalId(coin.getId())
                         .orElseGet(CryptoAsset::new);
 
                 if (asset.getId() == null) {
-                    // Nouveau record
                     asset.setExternalId(coin.getId());
                 }
 
@@ -72,7 +94,20 @@ public class CoinGeckoCollectorService {
                 asset.setImageUrl(coin.getImage());
                 asset.setMarketCapRank(coin.getMarket_cap_rank());
 
-                cryptoAssetRepository.save(asset);
+                CryptoAsset saved = cryptoAssetRepository.save(asset);
+
+                // ✅ On écrit NOW seulement si demandé (phase normale)
+                if (writeNowHistory && saved.getId() != null && saved.getCurrentPrice() != null) {
+                    cryptoPriceHistoryRepository.upsertPoint(
+                            saved.getId(),
+                            vsCurrency,
+                            now,
+                            saved.getCurrentPrice(),
+                            saved.getMarketCap(),
+                            saved.getTotalVolume()
+                    );
+                }
+
             } catch (Exception e) {
                 log.error("❌ Erreur lors de la sauvegarde de la crypto {} ({})",
                         coin.getName(), coin.getId(), e);

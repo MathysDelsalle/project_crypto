@@ -32,18 +32,23 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
+                // ✅ Préflight CORS (important)
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                 // Auth PUBLIC (register/login)
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                 .requestMatchers("/api/auth/**", "/error").permitAll()
 
                 // Home PUBLIC
-                .requestMatchers(HttpMethod.GET, "/api/cryptos/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/cryptos/**", "/api/crypto/**").permitAll()
 
+                // Admin
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                 // Le reste protégé
                 .anyRequest().authenticated()
             )
+
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(authenticationProvider)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

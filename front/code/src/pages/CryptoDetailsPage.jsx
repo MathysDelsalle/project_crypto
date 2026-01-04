@@ -11,27 +11,85 @@ import {
 } from "recharts";
 import "../App.css";
 
+/**
+ * On limite les intervalles à :
+ * - 1h
+ * - 24h
+ * - 7j
+ *
+ * Comme ton back renvoie une série "7 jours", on filtre côté front
+ * en fonction du timestamp.
+ */
 const INTERVALS = [
-  { label: "24h", days: 1 },
-  { label: "7j", days: 7 },
-  { label: "30j", days: 30 },
-  { label: "90j", days: 90 },
-  { label: "1 an", days: 365 },
-  { label: "Max", days: "max" },
+  { label: "1h", value: "1h", ms: 1 * 60 * 60 * 1000 },
+  { label: "24h", value: "24h", ms: 24 * 60 * 60 * 1000 },
+  { label: "7j", value: "7d", ms: 7 * 24 * 60 * 60 * 1000 },
 ];
 
+function formatTickDate(ms) {
+  const d = new Date(ms);
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+}
+
+function formatTickTime(ms) {
+  const d = new Date(ms);
+  return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatTooltipLabel(ms) {
+  const d = new Date(ms);
+  return d.toLocaleString("fr-FR");
+}
+
+function formatPrice(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "";
+  if (Math.abs(n) >= 1000) return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (Math.abs(n) >= 1) return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  return n.toLocaleString("en-US", { maximumFractionDigits: 6 });
+}
+
+function computeYDomain(data, key = "price") {
+  if (!Array.isArray(data) || data.length === 0) return ["auto", "auto"];
+
+  const vals = data
+    .map((p) => Number(p?.[key]))
+    .filter((x) => Number.isFinite(x));
+
+  if (vals.length === 0) return ["auto", "auto"];
+
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+
+  if (min === max) {
+    const pad = Math.max(Math.abs(min) * 0.01, 1e-6);
+    return [min - pad, max + pad];
+  }
+
+  const pad = Math.max((max - min) * 0.02, Math.abs(min) * 0.001);
+  return [min - pad, max + pad];
+}
+
+function sortByTsAsc(points) {
+  return [...points].sort((a, b) => Number(a.ts) - Number(b.ts));
+}
+
 export default function CryptoDetailsPage() {
-  const { id } = useParams();
+  const { id } = useParams(); // externalId
   const navigate = useNavigate();
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+  const API_BASE_URL =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
   const [allCryptos, setAllCryptos] = useState([]);
 
   const [crypto, setCrypto] = useState(null);
-  const [history, setHistory] = useState([]);
 
-  const [intervalDays, setIntervalDays] = useState(7);
+  // on garde l'historique brut (7 jours) tel que renvoyé par le back
+  const [rawHistory, setRawHistory] = useState([]);
+
+  // intervalle choisi (1h / 24h / 7j)
+  const [interval, setInterval] = useState("7d");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,10 +98,15 @@ export default function CryptoDetailsPage() {
   const [compareMode, setCompareMode] = useState(false);
   const [compareId, setCompareId] = useState("");
   const [compareCrypto, setCompareCrypto] = useState(null);
-  const [compareHistory, setCompareHistory] = useState([]);
+  const [compareRawHistory, setCompareRawHistory] = useState([]);
   const [compareLoading, setCompareLoading] = useState(false);
 
-  // fetch liste (pour dropdown comparaison)
+  const intervalMeta = useMemo(
+    () => INTERVALS.find((x) => x.value === interval) || INTERVALS[2],
+    [interval]
+  );
+
+  // fetch liste (dropdown comparaison)
   useEffect(() => {
     (async () => {
       try {
@@ -56,7 +119,7 @@ export default function CryptoDetailsPage() {
     })();
   }, [API_BASE_URL]);
 
-  // fetch crypto + historique
+  // fetch crypto + historique (7j depuis BDD)
   useEffect(() => {
     let cancelled = false;
 
@@ -65,21 +128,30 @@ export default function CryptoDetailsPage() {
         setLoading(true);
         setError(null);
 
-        const [cryptoRes, histRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/cryptos/${id}`),
-          fetch(`${API_BASE_URL}/cryptos/${id}/history?days=${intervalDays}`),
-        ]);
+        const listRes = await fetch(`${API_BASE_URL}/cryptos`);
+        if (!listRes.ok) throw new Error("Erreur liste cryptos");
+        const list = await listRes.json();
 
-        if (!cryptoRes.ok) throw new Error("Erreur crypto");
+        const selected = Array.isArray(list)
+          ? list.find((c) => c.externalId === id)
+          : null;
+        if (!selected) throw new Error("Crypto introuvable");
+
+        const histRes = await fetch(`${API_BASE_URL}/crypto/${id}/history?vs=usd`);
         if (!histRes.ok) throw new Error("Erreur historique");
-
-        const cryptoData = await cryptoRes.json();
         const histData = await histRes.json();
 
         if (cancelled) return;
 
-        setCrypto(cryptoData);
-        setHistory(histData || []);
+        setCrypto(selected);
+
+        const normalized = Array.isArray(histData)
+          ? histData
+              .filter((p) => p && p.ts != null && p.price != null)
+              .map((p) => ({ ts: Number(p.ts), price: Number(p.price) }))
+          : [];
+
+        setRawHistory(sortByTsAsc(normalized));
       } catch (e) {
         if (!cancelled) setError("Impossible de charger les détails de la crypto");
       } finally {
@@ -90,13 +162,13 @@ export default function CryptoDetailsPage() {
     return () => {
       cancelled = true;
     };
-  }, [API_BASE_URL, id, intervalDays]);
+  }, [API_BASE_URL, id]);
 
-  // fetch comparaison quand sélectionnée
+  // fetch comparaison (7j depuis BDD)
   useEffect(() => {
     if (!compareMode || !compareId) {
       setCompareCrypto(null);
-      setCompareHistory([]);
+      setCompareRawHistory([]);
       return;
     }
 
@@ -106,25 +178,26 @@ export default function CryptoDetailsPage() {
       try {
         setCompareLoading(true);
 
-        const [cryptoRes, histRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/cryptos/${compareId}`),
-          fetch(`${API_BASE_URL}/cryptos/${compareId}/history?days=${intervalDays}`),
-        ]);
+        const selectedCompare = allCryptos.find((c) => c.externalId === compareId) || null;
+        if (selectedCompare) setCompareCrypto(selectedCompare);
 
-        if (!cryptoRes.ok) throw new Error("Erreur compare crypto");
+        const histRes = await fetch(`${API_BASE_URL}/crypto/${compareId}/history?vs=usd`);
         if (!histRes.ok) throw new Error("Erreur compare historique");
-
-        const cryptoData = await cryptoRes.json();
         const histData = await histRes.json();
 
         if (cancelled) return;
 
-        setCompareCrypto(cryptoData);
-        setCompareHistory(histData || []);
+        const normalized = Array.isArray(histData)
+          ? histData
+              .filter((p) => p && p.ts != null && p.price != null)
+              .map((p) => ({ ts: Number(p.ts), price: Number(p.price) }))
+          : [];
+
+        setCompareRawHistory(sortByTsAsc(normalized));
       } catch {
         if (!cancelled) {
           setCompareCrypto(null);
-          setCompareHistory([]);
+          setCompareRawHistory([]);
         }
       } finally {
         if (!cancelled) setCompareLoading(false);
@@ -134,14 +207,45 @@ export default function CryptoDetailsPage() {
     return () => {
       cancelled = true;
     };
-  }, [API_BASE_URL, compareMode, compareId, intervalDays]);
+  }, [API_BASE_URL, compareMode, compareId, allCryptos]);
 
-  const title = crypto?.name ? `${crypto.name} (${crypto.symbol?.toUpperCase() || ""})` : "Détails crypto";
+  /**
+   * ✅ Filtrage côté front selon l'intervalle choisi
+   * On garde uniquement les points >= now - interval.ms
+   * et si ça donne 0 point (ex: pas assez de données),
+   * on retombe sur la série brute.
+   */
+  const history = useMemo(() => {
+    const now = Date.now();
+    const cut = now - intervalMeta.ms;
 
-  const intervalLabel = useMemo(() => {
-    const found = INTERVALS.find((x) => String(x.days) === String(intervalDays));
-    return found?.label || "";
-  }, [intervalDays]);
+    const filtered = rawHistory.filter((p) => p.ts >= cut);
+    return filtered.length > 0 ? filtered : rawHistory;
+  }, [rawHistory, intervalMeta.ms]);
+
+  const compareHistory = useMemo(() => {
+    if (!compareRawHistory?.length) return [];
+    const now = Date.now();
+    const cut = now - intervalMeta.ms;
+
+    const filtered = compareRawHistory.filter((p) => p.ts >= cut);
+    return filtered.length > 0 ? filtered : compareRawHistory;
+  }, [compareRawHistory, intervalMeta.ms]);
+
+  // ✅ Y-domain “zoom”
+  const yDomain = useMemo(() => computeYDomain(history, "price"), [history]);
+  const compareYDomain = useMemo(() => computeYDomain(compareHistory, "price"), [compareHistory]);
+
+  // ✅ Axe X : temps pour 1h/24h, date pour 7j
+  const xTickFormatter = useMemo(() => {
+    return interval === "7d" ? formatTickDate : formatTickTime;
+  }, [interval]);
+
+  const title = crypto?.name
+    ? `${crypto.name} (${crypto.symbol?.toUpperCase() || ""})`
+    : "Détails crypto";
+
+  const intervalLabel = intervalMeta.label;
 
   if (loading) return <div className="app">Chargement...</div>;
   if (error) return <div className="app error">{error}</div>;
@@ -156,11 +260,15 @@ export default function CryptoDetailsPage() {
         <h1 style={{ marginTop: "12px" }}>{title}</h1>
 
         <div className="details-meta">
-          {crypto?.imageUrl && <img src={crypto.imageUrl} alt={crypto.name} className="details-logo" />}
+          {crypto?.imageUrl && (
+            <img src={crypto.imageUrl} alt={crypto.name} className="details-logo" />
+          )}
           <div>
             <div className="details-row">
               <span className="details-label">Prix actuel</span>
-              <span className="details-value">{crypto?.currentPrice != null ? `${crypto.currentPrice} $` : "-"}</span>
+              <span className="details-value">
+                {crypto?.currentPrice != null ? `${formatPrice(crypto.currentPrice)} $` : "-"}
+              </span>
             </div>
             <div className="details-row">
               <span className="details-label">Market cap</span>
@@ -170,7 +278,9 @@ export default function CryptoDetailsPage() {
             </div>
             <div className="details-row">
               <span className="details-label">Rang</span>
-              <span className="details-value">{crypto?.marketCapRank != null ? `#${crypto.marketCapRank}` : "-"}</span>
+              <span className="details-value">
+                {crypto?.marketCapRank != null ? `#${crypto.marketCapRank}` : "-"}
+              </span>
             </div>
           </div>
         </div>
@@ -178,9 +288,9 @@ export default function CryptoDetailsPage() {
         <div className="details-controls">
           <div className="details-interval">
             <span className="details-label">Intervalle</span>
-            <select value={String(intervalDays)} onChange={(e) => setIntervalDays(e.target.value)}>
+            <select value={interval} onChange={(e) => setInterval(e.target.value)}>
               {INTERVALS.map((x) => (
-                <option key={String(x.days)} value={String(x.days)}>
+                <option key={x.value} value={x.value}>
                   {x.label}
                 </option>
               ))}
@@ -203,21 +313,22 @@ export default function CryptoDetailsPage() {
 
       <div className="card">
         <div className="chart-box">
-          <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={history}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="timestamp"
-                tickFormatter={(ts) => new Date(ts).toLocaleDateString("fr-FR")}
-              />
-              <YAxis tickFormatter={(v) => `${v}`} />
-              <Tooltip
-                labelFormatter={(ts) => new Date(ts).toLocaleString("fr-FR")}
-                formatter={(value) => [`${value} $`, "Prix"]}
-              />
-              <Line type="monotone" dataKey="price" dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
+          {history.length === 0 ? (
+            <div className="app">Pas encore de données d’historique (attends le bootstrap).</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={history}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="ts" tickFormatter={xTickFormatter} />
+                <YAxis domain={yDomain} tickFormatter={formatPrice} />
+                <Tooltip
+                  labelFormatter={(ts) => formatTooltipLabel(ts)}
+                  formatter={(value) => [`${formatPrice(value)} $`, "Prix"]}
+                />
+                <Line type="monotone" dataKey="price" dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -230,9 +341,9 @@ export default function CryptoDetailsPage() {
                 <select value={compareId} onChange={(e) => setCompareId(e.target.value)}>
                   <option value="">— Choisir —</option>
                   {allCryptos
-                    .filter((c) => c.id !== id)
+                    .filter((c) => c.externalId !== id)
                     .map((c) => (
-                      <option key={c.id} value={c.id}>
+                      <option key={c.externalId} value={c.externalId}>
                         {c.name} ({c.symbol?.toUpperCase()})
                       </option>
                     ))}
@@ -245,21 +356,18 @@ export default function CryptoDetailsPage() {
             {compareCrypto && compareHistory?.length > 0 && (
               <>
                 <p className="details-subtitle" style={{ marginTop: "10px" }}>
-                  Comparaison — {compareCrypto.name}
+                  Comparaison — {compareCrypto.name} — {intervalLabel}
                 </p>
 
                 <div className="chart-box">
                   <ResponsiveContainer width="100%" height={320}>
                     <LineChart data={compareHistory}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="timestamp"
-                        tickFormatter={(ts) => new Date(ts).toLocaleDateString("fr-FR")}
-                      />
-                      <YAxis tickFormatter={(v) => `${v}`} />
+                      <XAxis dataKey="ts" tickFormatter={xTickFormatter} />
+                      <YAxis domain={compareYDomain} tickFormatter={formatPrice} />
                       <Tooltip
-                        labelFormatter={(ts) => new Date(ts).toLocaleString("fr-FR")}
-                        formatter={(value) => [`${value} $`, "Prix"]}
+                        labelFormatter={(ts) => formatTooltipLabel(ts)}
+                        formatter={(value) => [`${formatPrice(value)} $`, "Prix"]}
                       />
                       <Line type="monotone" dataKey="price" dot={false} />
                     </LineChart>

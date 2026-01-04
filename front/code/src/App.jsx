@@ -1,4 +1,3 @@
-// App.jsx
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
@@ -6,7 +5,8 @@ import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import CryptoDetailsPage from "./pages/CryptoDetailsPage";
-import { isAuthenticated, getUser, logout } from "./services/authService";
+import UserSpacePage from "./pages/UserSpacePage";
+import { isAuthenticated, getUser, logout, getToken } from "./services/authService";
 
 /* ======================
    Pages simples
@@ -44,12 +44,10 @@ function RequireAdmin({ children }) {
 function HomeboardActions() {
   const navigate = useNavigate();
   const authed = isAuthenticated();
-  const user = authed ? getUser() : null;
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
 
   const handleMain = () => {
     if (!authed) return navigate("/login");
-    navigate(isAdmin ? "/admin" : "/app");
+    navigate("/me"); // ✅ tu voulais que ce bouton aille vers /me
   };
 
   const handleRegister = () => navigate("/register");
@@ -104,30 +102,21 @@ function CryptoDashboard() {
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
-  // ✅ Favoris (persistés)
-  const [favorites, setFavorites] = useState(() => {
-    try {
-      const raw = localStorage.getItem("crypto_favorites");
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  // ✅ Favoris (depuis BDD) : on stocke la liste des externalId
+  const [favorites, setFavorites] = useState([]); // string[] externalId
 
   // ✅ Filtre favoris uniquement
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
-  // ✅ Toast (alerte temporaire)
+  // ✅ Toast
   const [toast, setToast] = useState(null);
 
   const authed = isAuthenticated();
 
-  // Persist favoris
-  useEffect(() => {
-    localStorage.setItem("crypto_favorites", JSON.stringify(favorites));
-  }, [favorites]);
-
-  const isFav = (cryptoId) => favorites.includes(cryptoId);
+  function authHeaders() {
+    const token = getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
 
   const showToast = (message) => {
     setToast(message);
@@ -135,20 +124,62 @@ function CryptoDashboard() {
     window.__toastTimer = window.setTimeout(() => setToast(null), 2000);
   };
 
-  const toggleFavorite = (crypto) => {
-    setFavorites((prev) => {
-      const exists = prev.includes(crypto.id);
-      const next = exists ? prev.filter((id) => id !== crypto.id) : [...prev, crypto.id];
-
-      showToast(exists ? `${crypto.name} retirée des favoris` : `${crypto.name} a été placé dans les favoris`);
-      return next;
-    });
-  };
-
-  // Si l’utilisateur se déconnecte, on enlève le filtre (sinon ça “cache” tout)
+  // ✅ Charger favoris depuis la BDD quand connecté
   useEffect(() => {
-    if (!authed) setShowFavoritesOnly(false);
-  }, [authed]);
+    if (!authed) {
+      setFavorites([]);
+      setShowFavoritesOnly(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/me/favorites`, {
+          headers: { ...authHeaders() },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setFavorites(Array.isArray(data) ? data : []);
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [API_BASE_URL, authed]);
+
+  const isFav = (externalId) => favorites.includes(externalId);
+
+  const toggleFavorite = async (crypto) => {
+    if (!authed) return;
+
+    const extId = crypto.externalId;
+    const exists = favorites.includes(extId);
+
+    try {
+      const url = `${API_BASE_URL}/me/favorites/${extId}`;
+      const res = await fetch(url, {
+        method: exists ? "DELETE" : "POST",
+        headers: { ...authHeaders() },
+      });
+      if (!res.ok) throw new Error();
+
+      setFavorites((prev) =>
+        exists ? prev.filter((x) => x !== extId) : [...prev, extId]
+      );
+
+      showToast(
+        exists ? `${crypto.name} retirée des favoris` : `${crypto.name} a été placé dans les favoris`
+      );
+    } catch {
+      showToast("Erreur favoris (API)");
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -162,7 +193,7 @@ function CryptoDashboard() {
 
         const data = await response.json();
         if (!cancelled) {
-          setCryptos(data);
+          setCryptos(Array.isArray(data) ? data : []);
           setLastUpdate(new Date());
           setError(null);
         }
@@ -213,10 +244,10 @@ function CryptoDashboard() {
   const filteredCryptos = useMemo(() => {
     if (!authed) return sortedCryptos;
     if (!showFavoritesOnly) return sortedCryptos;
-    return sortedCryptos.filter((c) => favorites.includes(c.id));
+    return sortedCryptos.filter((c) => favorites.includes(c.externalId));
   }, [sortedCryptos, showFavoritesOnly, favorites, authed]);
 
-  // pagination sur la liste filtrée
+  // pagination
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filteredCryptos.length / ITEMS_PER_PAGE)),
     [filteredCryptos.length]
@@ -226,7 +257,6 @@ function CryptoDashboard() {
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
 
-  // si on active/désactive le filtre, on revient page 1
   useEffect(() => {
     setCurrentPage(1);
   }, [showFavoritesOnly]);
@@ -244,8 +274,8 @@ function CryptoDashboard() {
     }));
   };
 
-  const goToDetails = (cryptoId) => {
-    navigate(`/crypto/${cryptoId}`);
+  const goToDetails = (externalId) => {
+    navigate(`/crypto/${externalId}`);
   };
 
   if (loading) return <div className="app">Chargement...</div>;
@@ -319,11 +349,11 @@ function CryptoDashboard() {
               <tr
                 key={c.id}
                 className="crypto-row-clickable"
-                onClick={() => goToDetails(c.id)}
+                onClick={() => goToDetails(c.externalId)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") goToDetails(c.id);
+                  if (e.key === "Enter") goToDetails(c.externalId);
                 }}
               >
                 <td>#{c.marketCapRank}</td>
@@ -341,10 +371,10 @@ function CryptoDashboard() {
                         e.stopPropagation();
                         toggleFavorite(c);
                       }}
-                      title={isFav(c.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
-                      aria-label={isFav(c.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                      title={isFav(c.externalId) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                      aria-label={isFav(c.externalId) ? "Retirer des favoris" : "Ajouter aux favoris"}
                     >
-                      {isFav(c.id) ? "❤️" : "🤍"}
+                      {isFav(c.externalId) ? "❤️" : "🤍"}
                     </button>
                   </td>
                 )}
@@ -409,7 +439,6 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* ✅ Page détails crypto */}
       <Route path="/crypto/:id" element={<CryptoDetailsPage />} />
 
       <Route
@@ -427,6 +456,15 @@ export default function App() {
           <RequireAdmin>
             <AdminPage />
           </RequireAdmin>
+        }
+      />
+
+      <Route
+        path="/me"
+        element={
+          <RequireAuth>
+            <UserSpacePage />
+          </RequireAuth>
         }
       />
 
