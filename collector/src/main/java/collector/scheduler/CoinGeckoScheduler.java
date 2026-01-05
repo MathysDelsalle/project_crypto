@@ -8,17 +8,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import collector.repository.CryptoPriceHistoryRepository;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "app.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 public class CoinGeckoScheduler {
 
     private final CoinGeckoCollectorService collectorService;
     private final CryptoPriceHistoryRepository historyRepository;
     private final CoinGeckoTop100HistoryBootstrapService bootstrapService;
+    
 
     // ✅ NEW
     private final AlertCheckService alertCheckService;
