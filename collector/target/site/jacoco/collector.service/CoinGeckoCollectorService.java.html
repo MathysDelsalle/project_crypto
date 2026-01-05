@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CoinGeckoCollectorService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">collector</a> &gt; <a href="index.source.html" class="el_package">collector.service</a> &gt; <span class="el_source">CoinGeckoCollectorService.java</span></div><h1>CoinGeckoCollectorService.java</h1><pre class="source lang-java linenums">package collector.service;
+
+import collector.dto.CoinGeckoCoinDto;
+import collector.model.CryptoAsset;
+import collector.repository.CryptoAssetRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import collector.repository.CryptoPriceHistoryRepository;
+import reactor.core.publisher.Mono;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.List;
+
+@Service
+<span class="fc" id="L19">@RequiredArgsConstructor</span>
+<span class="fc" id="L20">@Slf4j</span>
+public class CoinGeckoCollectorService {
+
+    // Injecté depuis WebClientConfig
+    private final WebClient coinGeckoWebClient;
+
+    // Repository JPA pour enregistrer / mettre à jour les cryptos
+    private final CryptoAssetRepository cryptoAssetRepository;
+
+    // Historique
+    private final CryptoPriceHistoryRepository cryptoPriceHistoryRepository;
+
+    /**
+     * Comportement actuel (inchangé) :
+     * - met à jour crypto_assets
+     * - + écrit un point NOW dans crypto_price_history
+     */
+    public void collectTopMarketCoins() {
+<span class="nc" id="L38">        collectTopMarketCoins(true);</span>
+<span class="nc" id="L39">    }</span>
+
+    /**
+     * Variante interne:
+     * writeNowHistory=false =&gt; utile pour le bootstrap (remplit crypto_assets sans écrire NOW)
+     */
+    public void collectTopMarketCoins(boolean writeNowHistory) {
+
+<span class="fc" id="L47">        Mono&lt;CoinGeckoCoinDto[]&gt; monoResponse = coinGeckoWebClient.get()</span>
+<span class="fc" id="L48">                .uri(uriBuilder -&gt; uriBuilder</span>
+<span class="fc" id="L49">                        .path(&quot;/coins/markets&quot;)</span>
+<span class="fc" id="L50">                        .queryParam(&quot;vs_currency&quot;, &quot;usd&quot;)</span>
+<span class="fc" id="L51">                        .queryParam(&quot;order&quot;, &quot;market_cap_desc&quot;)</span>
+<span class="fc" id="L52">                        .queryParam(&quot;per_page&quot;, &quot;100&quot;)</span>
+<span class="fc" id="L53">                        .queryParam(&quot;page&quot;, &quot;1&quot;)</span>
+<span class="fc" id="L54">                        .queryParam(&quot;sparkline&quot;, &quot;false&quot;)</span>
+<span class="fc" id="L55">                        .build()</span>
+                )
+<span class="fc" id="L57">                .retrieve()</span>
+<span class="fc" id="L58">                .bodyToMono(CoinGeckoCoinDto[].class);</span>
+
+<span class="fc" id="L60">        CoinGeckoCoinDto[] response = monoResponse.block(); // OK dans un batch/scheduler</span>
+
+<span class="pc bpc" id="L62" title="1 of 4 branches missed.">        if (response == null || response.length == 0) {</span>
+<span class="fc" id="L63">            log.warn(&quot;⚠️ Réponse CoinGecko vide, aucune donnée collectée.&quot;);</span>
+<span class="fc" id="L64">            return;</span>
+        }
+
+        // Timestamp commun au run si on écrit NOW
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        Instant now = writeNowHistory</span>
+<span class="fc" id="L69">                ? Instant.now().truncatedTo(ChronoUnit.MINUTES)</span>
+<span class="fc" id="L70">                : null;</span>
+
+<span class="fc" id="L72">        String vsCurrency = &quot;usd&quot;;</span>
+
+<span class="fc" id="L74">        List&lt;CoinGeckoCoinDto&gt; coins = Arrays.asList(response);</span>
+<span class="fc" id="L75">        log.info(&quot;✅ {} cryptos récupérées depuis CoinGecko.&quot;, coins.size());</span>
+
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        for (CoinGeckoCoinDto coin : coins) {</span>
+            try {
+<span class="fc" id="L79">                CryptoAsset asset = cryptoAssetRepository</span>
+<span class="fc" id="L80">                        .findByExternalId(coin.getId())</span>
+<span class="fc" id="L81">                        .orElseGet(CryptoAsset::new);</span>
+
+<span class="fc bfc" id="L83" title="All 2 branches covered.">                if (asset.getId() == null) {</span>
+<span class="fc" id="L84">                    asset.setExternalId(coin.getId());</span>
+                }
+
+<span class="fc" id="L87">                asset.setSymbol(coin.getSymbol());</span>
+<span class="fc" id="L88">                asset.setName(coin.getName());</span>
+<span class="fc" id="L89">                asset.setCurrentPrice(coin.getCurrent_price());</span>
+<span class="fc" id="L90">                asset.setMarketCap(coin.getMarket_cap());</span>
+<span class="fc" id="L91">                asset.setTotalVolume(coin.getTotal_volume());</span>
+<span class="fc" id="L92">                asset.setPrice_change_24h(coin.getPrice_change_24h());</span>
+<span class="fc" id="L93">                asset.setImageUrl(coin.getImage());</span>
+<span class="fc" id="L94">                asset.setMarketCapRank(coin.getMarket_cap_rank());</span>
+
+<span class="fc" id="L96">                CryptoAsset saved = cryptoAssetRepository.save(asset);</span>
+
+                // ✅ On écrit NOW seulement si demandé (phase normale)
+<span class="pc bpc" id="L99" title="2 of 6 branches missed.">                if (writeNowHistory &amp;&amp; saved.getId() != null &amp;&amp; saved.getCurrentPrice() != null) {</span>
+<span class="fc" id="L100">                    cryptoPriceHistoryRepository.upsertPoint(</span>
+<span class="fc" id="L101">                            saved.getId(),</span>
+                            vsCurrency,
+                            now,
+<span class="fc" id="L104">                            saved.getCurrentPrice(),</span>
+<span class="fc" id="L105">                            saved.getMarketCap(),</span>
+<span class="fc" id="L106">                            saved.getTotalVolume()</span>
+                    );
+                }
+
+<span class="nc" id="L110">            } catch (Exception e) {</span>
+<span class="nc" id="L111">                log.error(&quot;❌ Erreur lors de la sauvegarde de la crypto {} ({})&quot;,</span>
+<span class="nc" id="L112">                        coin.getName(), coin.getId(), e);</span>
+<span class="fc" id="L113">            }</span>
+<span class="fc" id="L114">        }</span>
+
+<span class="fc" id="L116">        log.info(&quot;🏁 Collecte CoinGecko terminée, cryptos enregistrées / mises à jour en BDD.&quot;);</span>
+<span class="fc" id="L117">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -1,0 +1,10 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+collector,collector.service,CoinGeckoCollectorService,24,195,3,13,5,48,4,9,1,4
+collector,collector.service,CoinGeckoHistoryCollectorService,10,146,6,8,2,31,7,4,1,3
+collector,collector.service,CoinGeckoTop100HistoryBootstrapService,111,0,14,0,27,0,10,0,3,0
+collector,collector.service,MailService,43,0,0,0,14,0,2,0,2,0
+collector,collector.service,AlertCheckService,0,181,2,18,0,36,2,13,0,5
+collector,collector.model,User,105,10,22,0,1,2,17,3,6,3
+collector,collector.model,CryptoAsset,365,70,86,0,1,10,48,20,5,20
+collector,collector.model,PriceAlert,382,52,82,0,6,8,53,14,12,14
+collector,collector.model,CryptoPriceHistory,304,12,62,0,4,4,46,4,15,4

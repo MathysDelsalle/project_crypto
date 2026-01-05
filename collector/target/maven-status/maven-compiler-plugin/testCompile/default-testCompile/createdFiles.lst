@@ -1,0 +1,5 @@
+collector/service/CoinGeckoCollectorServiceTest.class
+collector/service/CoinGeckoCollectorServiceIT.class
+collector/service/CoinGeckoHistoryCollectorServiceTest.class
+collector/repository/CryptoPriceHistoryRepositoryIT.class
+collector/service/AlertCheckServiceTest.class
