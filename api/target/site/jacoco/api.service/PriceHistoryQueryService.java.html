@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PriceHistoryQueryService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">api</a> &gt; <a href="index.source.html" class="el_package">api.service</a> &gt; <span class="el_source">PriceHistoryQueryService.java</span></div><h1>PriceHistoryQueryService.java</h1><pre class="source lang-java linenums">package api.service;
+
+import api.dto.PricePointDto;
+import api.repository.CryptoAssetRepository;
+import api.repository.CryptoPriceHistoryRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+<span class="fc" id="L15">@RequiredArgsConstructor</span>
+public class PriceHistoryQueryService {
+
+    private final CryptoAssetRepository assetRepository;
+    private final CryptoPriceHistoryRepository historyRepository;
+
+    public List&lt;PricePointDto&gt; getLast7DaysSeriesByExternalId(String externalId, String vsCurrency) {
+<span class="fc" id="L22">        var assetOpt = assetRepository.findByExternalId(externalId);</span>
+<span class="fc bfc" id="L23" title="All 2 branches covered.">            if (assetOpt.isEmpty()) {</span>
+<span class="fc" id="L24">                return List.of(); // historique vide → pas d'erreur HTTP</span>
+            }
+<span class="fc" id="L26">            var asset = assetOpt.get();</span>
+
+
+<span class="fc" id="L29">        Instant from = Instant.now().minus(7, ChronoUnit.DAYS);</span>
+
+<span class="fc" id="L31">        List&lt;Object[]&gt; rows = historyRepository.findPriceSeries(asset.getId(), vsCurrency, from);</span>
+
+<span class="fc" id="L33">        List&lt;PricePointDto&gt; out = new ArrayList&lt;&gt;(rows.size());</span>
+<span class="fc bfc" id="L34" title="All 2 branches covered.">        for (Object[] r : rows) {</span>
+            // r[0] = ts (Timestamp), r[1] = price (Double)
+<span class="fc" id="L36">            Object tsObj = r[0];</span>
+            Instant ts;
+
+<span class="fc bfc" id="L39" title="All 2 branches covered.">            if (tsObj instanceof java.sql.Timestamp t) {</span>
+<span class="fc" id="L40">                ts = t.toInstant();</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">            } else if (tsObj instanceof java.time.OffsetDateTime odt) {</span>
+<span class="fc" id="L42">                ts = odt.toInstant();</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">            } else if (tsObj instanceof java.time.LocalDateTime ldt) {</span>
+<span class="fc" id="L44">                ts = ldt.atZone(java.time.ZoneOffset.UTC).toInstant();</span>
+<span class="fc bfc" id="L45" title="All 2 branches covered.">            } else if (tsObj instanceof Instant i) {</span>
+<span class="fc" id="L46">                ts = i;</span>
+            } else {
+<span class="fc" id="L48">                throw new IllegalStateException(&quot;Type ts inattendu: &quot; + tsObj.getClass());</span>
+            }
+
+<span class="fc" id="L51">            double price = ((Number) r[1]).doubleValue();</span>
+<span class="fc" id="L52">            out.add(new PricePointDto(ts.toEpochMilli(), price));</span>
+
+<span class="fc" id="L54">        }</span>
+<span class="fc" id="L55">        return out;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

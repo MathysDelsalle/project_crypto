@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: api.service.TradeServiceTest
+-------------------------------------------------------------------------------
+Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.914 s -- in api.service.TradeServiceTest

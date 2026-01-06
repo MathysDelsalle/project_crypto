@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">api</a> &gt; <a href="index.source.html" class="el_package">api.controller</a> &gt; <span class="el_source">AdminController.java</span></div><h1>AdminController.java</h1><pre class="source lang-java linenums">package api.controller;
+
+import api.dto.AdminUserDto;
+import api.dto.FundsRequest;
+import api.model.Role;
+import api.repository.RoleRepository;
+import api.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/api/admin&quot;)
+<span class="fc" id="L17">@RequiredArgsConstructor</span>
+public class AdminController {
+
+  private final UserRepository userRepository;
+  private final RoleRepository roleRepository;
+
+  @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+  @GetMapping(&quot;/users&quot;)
+  public List&lt;AdminUserDto&gt; listUsers() {
+<span class="nc" id="L26">    return userRepository.findAll().stream()</span>
+<span class="nc" id="L27">        .map(u -&gt; AdminUserDto.builder()</span>
+<span class="nc" id="L28">            .id(u.getId())</span>
+<span class="nc" id="L29">            .username(u.getUsername())</span>
+<span class="nc" id="L30">            .email(u.getEmail())</span>
+<span class="nc" id="L31">            .balance(u.getBalance())</span>
+<span class="nc" id="L32">            .enabled(u.isEnabled())</span>
+<span class="nc" id="L33">            .roles(u.getRoles().stream().map(Role::getName).collect(Collectors.toSet()))</span>
+<span class="nc" id="L34">            .build()</span>
+        )
+<span class="nc" id="L36">        .collect(Collectors.toList());</span>
+  }
+
+  @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+  @PostMapping(&quot;/promote/{username}&quot;)
+  public String promoteToAdmin(@PathVariable String username) {
+<span class="nc" id="L42">    var user = userRepository.findByUsername(username)</span>
+<span class="nc" id="L43">        .orElseThrow(() -&gt; new RuntimeException(&quot;User not found&quot;));</span>
+
+<span class="nc" id="L45">    Role adminRole = roleRepository.findByName(&quot;ROLE_ADMIN&quot;)</span>
+<span class="nc" id="L46">        .orElseThrow(() -&gt; new RuntimeException(&quot;ROLE_ADMIN not found&quot;));</span>
+
+<span class="nc" id="L48">    user.getRoles().add(adminRole);</span>
+<span class="nc" id="L49">    userRepository.save(user);</span>
+
+<span class="nc" id="L51">    return &quot;OK: &quot; + username + &quot; is now ADMIN&quot;;</span>
+  }
+
+  @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+  @PostMapping(&quot;/demote/{username}&quot;)
+  public String demoteToUser(@PathVariable String username) {
+<span class="nc" id="L57">    var user = userRepository.findByUsername(username)</span>
+<span class="nc" id="L58">        .orElseThrow(() -&gt; new RuntimeException(&quot;User not found&quot;));</span>
+
+<span class="nc" id="L60">    Role adminRole = roleRepository.findByName(&quot;ROLE_ADMIN&quot;)</span>
+<span class="nc" id="L61">        .orElseThrow(() -&gt; new RuntimeException(&quot;ROLE_ADMIN not found&quot;));</span>
+
+<span class="nc" id="L63">    Role userRole = roleRepository.findByName(&quot;ROLE_USER&quot;)</span>
+<span class="nc" id="L64">        .orElseThrow(() -&gt; new RuntimeException(&quot;ROLE_USER not found&quot;));</span>
+
+    // empêcher un admin de se retirer lui-même
+    var currentUsername = org.springframework.security.core.context.SecurityContextHolder
+<span class="nc" id="L68">        .getContext().getAuthentication().getName();</span>
+
+<span class="nc bnc" id="L70" title="All 2 branches missed.">    if (user.getUsername().equals(currentUsername)) {</span>
+<span class="nc" id="L71">      throw new RuntimeException(&quot;You cannot demote yourself&quot;);</span>
+    }
+
+<span class="nc" id="L74">    user.getRoles().remove(adminRole);</span>
+<span class="nc" id="L75">    user.getRoles().add(userRole);</span>
+
+<span class="nc" id="L77">    userRepository.save(user);</span>
+
+<span class="nc" id="L79">    return &quot;OK: &quot; + username + &quot; is now USER&quot;;</span>
+  }
+
+  // ✅ Ajouter/enlever des fonds
+  @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+  @PatchMapping(&quot;/funds/{username}&quot;)
+  public AdminUserDto updateFunds(@PathVariable String username, @RequestBody FundsRequest request) {
+<span class="nc bnc" id="L86" title="All 4 branches missed.">    if (request == null || request.getDelta() == null) {</span>
+<span class="nc" id="L87">      throw new RuntimeException(&quot;Missing delta&quot;);</span>
+    }
+
+<span class="nc" id="L90">    var user = userRepository.findByUsername(username)</span>
+<span class="nc" id="L91">        .orElseThrow(() -&gt; new RuntimeException(&quot;User not found&quot;));</span>
+
+<span class="nc bnc" id="L93" title="All 2 branches missed.">    double newBalance = (user.getBalance() == null ? 0.0 : user.getBalance()) + request.getDelta();</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">    if (newBalance &lt; 0) {</span>
+<span class="nc" id="L95">      throw new RuntimeException(&quot;Balance cannot be negative&quot;);</span>
+    }
+
+<span class="nc" id="L98">    user.setBalance(newBalance);</span>
+<span class="nc" id="L99">    userRepository.save(user);</span>
+
+<span class="nc" id="L101">    return AdminUserDto.builder()</span>
+<span class="nc" id="L102">        .id(user.getId())</span>
+<span class="nc" id="L103">        .username(user.getUsername())</span>
+<span class="nc" id="L104">        .email(user.getEmail())</span>
+<span class="nc" id="L105">        .balance(user.getBalance())</span>
+<span class="nc" id="L106">        .enabled(user.isEnabled())</span>
+<span class="nc" id="L107">        .roles(user.getRoles().stream().map(Role::getName).collect(Collectors.toSet()))</span>
+<span class="nc" id="L108">        .build();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

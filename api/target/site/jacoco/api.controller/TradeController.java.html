@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TradeController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">api</a> &gt; <a href="index.source.html" class="el_package">api.controller</a> &gt; <span class="el_source">TradeController.java</span></div><h1>TradeController.java</h1><pre class="source lang-java linenums">package api.controller;
+
+import api.dto.HoldingResponse;
+import api.service.TradeService;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+<span class="fc" id="L14">@RequiredArgsConstructor</span>
+@RequestMapping(&quot;/api/me&quot;)
+public class TradeController {
+
+    private final TradeService tradeService;
+
+    @GetMapping(&quot;/holdings&quot;)
+    public List&lt;HoldingResponse&gt; getHoldings(Authentication auth) {
+<span class="nc" id="L22">        return tradeService.getHoldings(auth.getName());</span>
+    }
+
+    @PostMapping(&quot;/trade/buy/{externalId}&quot;)
+    public Map&lt;String, Double&gt; buy(Authentication auth, @PathVariable String externalId, @RequestBody QtyRequest req) {
+<span class="nc" id="L27">        double newBalance = tradeService.buy(auth.getName(), externalId, req.getQty());</span>
+<span class="nc" id="L28">        return Map.of(&quot;balance&quot;, newBalance);</span>
+    }
+
+    @PostMapping(&quot;/trade/sell/{externalId}&quot;)
+    public Map&lt;String, Double&gt; sell(Authentication auth, @PathVariable String externalId, @RequestBody QtyRequest req) {
+<span class="nc" id="L33">        double newBalance = tradeService.sell(auth.getName(), externalId, req.getQty());</span>
+<span class="nc" id="L34">        return Map.of(&quot;balance&quot;, newBalance);</span>
+    }
+
+<span class="nc bnc" id="L37" title="All 8 branches missed.">    @Data</span>
+    public static class QtyRequest {
+<span class="nc" id="L39">        private double qty = 1.0; // default 1</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

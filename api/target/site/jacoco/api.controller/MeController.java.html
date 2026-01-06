@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MeController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">api</a> &gt; <a href="index.source.html" class="el_package">api.controller</a> &gt; <span class="el_source">MeController.java</span></div><h1>MeController.java</h1><pre class="source lang-java linenums">package api.controller;
+
+import api.service.UserSpaceService;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+<span class="fc" id="L13">@RequiredArgsConstructor</span>
+@RequestMapping(&quot;/api/me&quot;)
+public class MeController {
+
+    private final UserSpaceService userSpaceService;
+
+    @GetMapping(&quot;/balance&quot;)
+    public Map&lt;String, Double&gt; getBalance(Authentication auth) {
+<span class="nc" id="L21">        String username = auth.getName();</span>
+<span class="nc" id="L22">        return Map.of(&quot;balance&quot;, userSpaceService.getBalance(username));</span>
+    }
+
+    @PostMapping(&quot;/balance/add&quot;)
+    public Map&lt;String, Double&gt; addBalance(Authentication auth, @RequestBody AddBalanceRequest req) {
+<span class="nc" id="L27">        String username = auth.getName();</span>
+<span class="nc" id="L28">        double newBalance = userSpaceService.addBalance(username, req.getAmount());</span>
+<span class="nc" id="L29">        return Map.of(&quot;balance&quot;, newBalance);</span>
+    }
+
+    @GetMapping(&quot;/favorites&quot;)
+    public List&lt;String&gt; getFavorites(Authentication auth) {
+<span class="nc" id="L34">        String username = auth.getName();</span>
+<span class="nc" id="L35">        return userSpaceService.getFavorites(username);</span>
+    }
+
+    @PostMapping(&quot;/favorites/{externalId}&quot;)
+    public void addFavorite(Authentication auth, @PathVariable String externalId) {
+<span class="nc" id="L40">        String username = auth.getName();</span>
+<span class="nc" id="L41">        userSpaceService.addFavorite(username, externalId);</span>
+<span class="nc" id="L42">    }</span>
+
+    @DeleteMapping(&quot;/favorites/{externalId}&quot;)
+    public void removeFavorite(Authentication auth, @PathVariable String externalId) {
+<span class="nc" id="L46">        String username = auth.getName();</span>
+<span class="nc" id="L47">        userSpaceService.removeFavorite(username, externalId);</span>
+<span class="nc" id="L48">    }</span>
+
+<span class="nc bnc" id="L50" title="All 8 branches missed.">    @Data</span>
+    public static class AddBalanceRequest {
+<span class="nc" id="L52">        private double amount;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

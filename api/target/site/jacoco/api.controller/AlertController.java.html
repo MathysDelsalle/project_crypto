@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AlertController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">api</a> &gt; <a href="index.source.html" class="el_package">api.controller</a> &gt; <span class="el_source">AlertController.java</span></div><h1>AlertController.java</h1><pre class="source lang-java linenums">package api.controller;
+
+import api.dto.AlertResponse;
+import api.dto.UpsertAlertRequest;
+import api.model.CryptoAsset;
+import api.model.PriceAlert;
+import api.model.User;
+import api.repository.CryptoAssetRepository;
+import api.repository.PriceAlertRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api/me/alerts&quot;)
+<span class="fc" id="L19">@RequiredArgsConstructor</span>
+public class AlertController {
+
+    private final PriceAlertRepository alertRepository;
+    private final CryptoAssetRepository assetRepository;
+
+    // ==========================
+    // GET : récupérer mes alertes
+    // ==========================
+    @GetMapping
+    public List&lt;AlertResponse&gt; getMyAlerts(@AuthenticationPrincipal User user) {
+<span class="nc" id="L30">        return alertRepository.findByUserId(user.getId())</span>
+<span class="nc" id="L31">                .stream()</span>
+<span class="nc" id="L32">                .map(this::toResponse)</span>
+<span class="nc" id="L33">                .toList();</span>
+    }
+
+    // ==========================
+    // POST : créer ou modifier (upsert)
+    // ==========================
+    @PostMapping
+    public ResponseEntity&lt;AlertResponse&gt; upsertAlertPost(
+            @AuthenticationPrincipal User user,
+            @RequestBody UpsertAlertRequest request
+    ) {
+<span class="nc" id="L44">        return upsertInternal(user, request);</span>
+    }
+
+    // ==========================
+    // PUT : créer ou modifier (upsert)
+    // ==========================
+    @PutMapping
+    public ResponseEntity&lt;AlertResponse&gt; upsertAlertPut(
+            @AuthenticationPrincipal User user,
+            @RequestBody UpsertAlertRequest request
+    ) {
+<span class="nc" id="L55">        return upsertInternal(user, request);</span>
+    }
+
+    @DeleteMapping(&quot;/{externalId}&quot;)
+    public ResponseEntity&lt;Void&gt; deleteAlert(
+            @AuthenticationPrincipal User user,
+            @PathVariable String externalId
+    ) {
+<span class="nc" id="L63">        CryptoAsset asset = assetRepository.findByExternalId(externalId)</span>
+<span class="nc" id="L64">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Unknown crypto: &quot; + externalId));</span>
+
+<span class="nc" id="L66">        long deleted = alertRepository.deleteByUserIdAndAsset_Id(user.getId(), asset.getId());</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">        return deleted &gt; 0 ? ResponseEntity.noContent().build()</span>
+<span class="nc" id="L68">                        : ResponseEntity.notFound().build();</span>
+    }
+
+
+
+    // ==========================
+    // LOGIQUE COMMUNE (1 SEULE FOIS)
+    // ==========================
+    private ResponseEntity&lt;AlertResponse&gt; upsertInternal(
+            User user,
+            UpsertAlertRequest request
+    ) {
+<span class="nc bnc" id="L80" title="All 4 branches missed.">        if (request.getExternalId() == null || request.getExternalId().isBlank()) {</span>
+<span class="nc" id="L81">            return ResponseEntity.badRequest().build();</span>
+        }
+
+<span class="nc bnc" id="L84" title="All 4 branches missed.">        if (request.getThresholdHigh() == null &amp;&amp; request.getThresholdLow() == null) {</span>
+<span class="nc" id="L85">            return ResponseEntity.badRequest().build();</span>
+        }
+
+<span class="nc" id="L88">        CryptoAsset asset = assetRepository.findByExternalId(request.getExternalId())</span>
+<span class="nc" id="L89">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Unknown crypto: &quot; + request.getExternalId()));</span>
+
+<span class="nc" id="L91">        PriceAlert alert = alertRepository</span>
+<span class="nc" id="L92">                .findByUserIdAndAsset_Id(user.getId(), asset.getId())</span>
+<span class="nc" id="L93">                .orElseGet(PriceAlert::new);</span>
+
+<span class="nc" id="L95">        alert.setUserId(user.getId());</span>
+<span class="nc" id="L96">        alert.setAsset(asset);</span>
+<span class="nc" id="L97">        alert.setThresholdHigh(request.getThresholdHigh());</span>
+<span class="nc" id="L98">        alert.setThresholdLow(request.getThresholdLow());</span>
+<span class="nc bnc" id="L99" title="All 4 branches missed.">        alert.setActive(request.getActive() == null || request.getActive());</span>
+
+        // reset triggers à chaque modification
+<span class="nc" id="L102">        alert.setLastTriggeredHighAt(null);</span>
+<span class="nc" id="L103">        alert.setLastTriggeredLowAt(null);</span>
+
+<span class="nc" id="L105">        PriceAlert saved = alertRepository.save(alert);</span>
+<span class="nc" id="L106">        return ResponseEntity.ok(toResponse(saved));</span>
+    }
+
+    // ==========================
+    // Mapper réponse
+    // ==========================
+    private AlertResponse toResponse(PriceAlert alert) {
+<span class="nc" id="L113">        AlertResponse r = new AlertResponse();</span>
+<span class="nc" id="L114">        r.setExternalId(alert.getAsset().getExternalId());</span>
+<span class="nc" id="L115">        r.setName(alert.getAsset().getName());</span>
+<span class="nc" id="L116">        r.setSymbol(alert.getAsset().getSymbol());</span>
+<span class="nc" id="L117">        r.setThresholdHigh(alert.getThresholdHigh());</span>
+<span class="nc" id="L118">        r.setThresholdLow(alert.getThresholdLow());</span>
+<span class="nc" id="L119">        r.setActive(alert.isActive());</span>
+<span class="nc" id="L120">        return r;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

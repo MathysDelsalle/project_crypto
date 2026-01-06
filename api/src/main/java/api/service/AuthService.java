@@ -1,14 +1,17 @@
 package api.service;
 
+import api.dto.AuthResponse;
+import api.dto.LoginRequest;
+import api.dto.RegisterRequest;
+import api.exception.BusinessException;
 import api.model.Role;
 import api.model.User;
 import api.repository.RoleRepository;
 import api.repository.UserRepository;
-import api.dto.RegisterRequest;
-import api.dto.LoginRequest;
-import api.dto.AuthResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,15 +26,14 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public AuthResponse register(RegisterRequest request) {
-        // Vérifie si l'utilisateur ou l'email existe déjà
+        // Erreurs attendues => BusinessException (pas de stacktrace, status propre)
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Ce nom d'utilisateur est déjà pris.");
+            throw new BusinessException(HttpStatus.CONFLICT, "Ce nom d'utilisateur est déjà pris.");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Cet email est déjà utilisé.");
+            throw new BusinessException(HttpStatus.CONFLICT, "Cet email est déjà utilisé.");
         }
 
-        // Crée un nouvel utilisateur
         var user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
@@ -39,43 +41,47 @@ public class AuthService {
                 .enabled(true)
                 .build();
 
-        // Ajoute le rôle USER par défaut
+        // Problème de config serveur => 500 (on garde stacktrace via handler générique si tu préfères)
         Role userRole = roleRepository.findByName("ROLE_USER")
-            .orElseThrow(() -> new RuntimeException("ROLE_USER not found"));
+                .orElseThrow(() -> new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "ROLE_USER not found"));
+
         user.getRoles().add(userRole);
 
         userRepository.save(user);
+
         var jwtToken = jwtService.generateToken(user);
         return AuthResponse.builder()
-        .token(jwtToken)
-        .username(user.getUsername())
-        .roles(user.getRoles().stream().map(Role::getName).toList())
-        .build();
+                .token(jwtToken)
+                .username(user.getUsername())
+                .roles(user.getRoles().stream().map(Role::getName).toList())
+                .build();
     }
 
     public AuthResponse login(LoginRequest request) {
-    String identifier = request.getUsername();
+        String identifier = request.getUsername();
 
-    // 1) Trouver l'utilisateur par username OU email
-    var user = userRepository.findByUsername(identifier)
-            .or(() -> userRepository.findByEmail(identifier))
-            .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé."));
+        // Erreur attendue => 401 (évite d’indiquer si user existe ou pas)
+        User user = userRepository.findByUsername(identifier)
+                .or(() -> userRepository.findByEmail(identifier))
+                .orElseThrow(() -> new BusinessException(HttpStatus.UNAUTHORIZED, "Identifiants invalides."));
 
-    // 2) Authentifier avec le username réel (celui attendu par Spring Security)
-    authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                    user.getUsername(),
-                    request.getPassword()
-            )
-    );
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            user.getUsername(), // username réel attendu par Spring Security
+                            request.getPassword()
+                    )
+            );
+        } catch (BadCredentialsException ex) {
+            // Erreur attendue => 401, pas de stacktrace
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, "Identifiants invalides.");
+        }
 
-    // 3) Générer le token
-    var jwtToken = jwtService.generateToken(user);
-    return AuthResponse.builder()
-        .token(jwtToken)
-        .username(user.getUsername())
-        .roles(user.getRoles().stream().map(Role::getName).toList())
-        .build();
+        var jwtToken = jwtService.generateToken(user);
+        return AuthResponse.builder()
+                .token(jwtToken)
+                .username(user.getUsername())
+                .roles(user.getRoles().stream().map(Role::getName).toList())
+                .build();
+    }
 }
-}
-
