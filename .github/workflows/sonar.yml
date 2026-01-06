@@ -48,8 +48,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.organization=Mathys-git
-            -Dsonar.projectKey=mathys-key
+            -Dsonar.organization=mathys-key
+            -Dsonar.projectKey=project_crypto
             -Dsonar.projectName=project_crypto
             -Dsonar.sources=api/src/main/java,collector/src/main/java
             -Dsonar.tests=api/src/test/java,collector/src/test/java
