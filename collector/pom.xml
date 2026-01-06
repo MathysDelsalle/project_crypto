@@ -12,7 +12,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>imc</groupId>
+    <groupId>crypto</groupId>
     <artifactId>collector</artifactId>
     <version>1.0.0</version>
 

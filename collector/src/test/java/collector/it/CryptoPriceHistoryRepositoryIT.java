@@ -1,7 +1,10 @@
-package collector.repository;
+package collector.it;
 
 import collector.model.CryptoAsset;
 import collector.model.CryptoPriceHistory;
+import collector.repository.CryptoAssetRepository;
+import collector.repository.CryptoPriceHistoryRepository;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;

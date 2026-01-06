@@ -7,21 +7,7 @@ import RegisterPage from "./pages/RegisterPage";
 import CryptoDetailsPage from "./pages/CryptoDetailsPage";
 import UserSpacePage from "./pages/UserSpacePage";
 import { isAuthenticated, getUser, logout, getToken } from "./services/authService";
-
-/* ======================
-   Pages simples
-====================== */
-
-function AdminPage() {
-  return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Admin</h1>
-        <p>Page admin (à compléter)</p>
-      </header>
-    </div>
-  );
-}
+import AdminPage from "./pages/AdminPage";
 
 /* ======================
    Guards
@@ -45,9 +31,12 @@ function HomeboardActions() {
   const navigate = useNavigate();
   const authed = isAuthenticated();
 
+  const user = getUser();
+  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+
   const handleMain = () => {
     if (!authed) return navigate("/login");
-    navigate("/me"); // ✅ tu voulais que ce bouton aille vers /me
+    navigate("/me");
   };
 
   const handleRegister = () => navigate("/register");
@@ -63,6 +52,13 @@ function HomeboardActions() {
         {authed ? "Accéder à mon espace" : "Se connecter"}
       </button>
 
+      {/* ✅ NOUVEAU bouton Admin (admin only) */}
+      {authed && isAdmin && (
+        <button className="page-btn" onClick={() => navigate("/admin")}>
+          Admin
+        </button>
+      )}
+
       {!authed && (
         <button className="page-btn" onClick={handleRegister}>
           S’inscrire
@@ -77,6 +73,7 @@ function HomeboardActions() {
     </div>
   );
 }
+
 
 /* ======================
    Dashboard (Homeboard + App)

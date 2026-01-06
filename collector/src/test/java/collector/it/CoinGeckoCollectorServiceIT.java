@@ -1,7 +1,8 @@
-package collector.service;
+package collector.it;
 
 import collector.repository.CryptoAssetRepository;
 import collector.repository.CryptoPriceHistoryRepository;
+import collector.service.CoinGeckoCollectorService;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterAll;

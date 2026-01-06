@@ -1,41 +1,59 @@
-name: CI - Tests & SonarCloud
+name: SonarCloud (api + collector)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   pull_request:
+    types: [ opened, synchronize, reopened ]
 
 jobs:
-  build:
+  build-and-sonar:
+    name: Build, Test, Coverage, Sonar
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # utile pour Sonar (blame/PR)
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          distribution: "temurin"
+          java-version: "17"
+          cache: "maven"
 
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+      # -------------------------
+      # Build + tests + JaCoCo API
+      # -------------------------
+      - name: Build & test (api)
+        working-directory: api
+        run: mvn -B clean verify jacoco:report
 
-      - name: Build & run tests
-        run: mvn clean verify
+      # ------------------------------
+      # Build + tests + JaCoCo collector
+      # ------------------------------
+      - name: Build & test (collector)
+        working-directory: collector
+        run: mvn -B clean verify jacoco:report
 
+      # -------------------------
+      # SonarCloud Scan (1 projet)
+      # -------------------------
       - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v3
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          mvn sonar:sonar \
-            -Dsonar.organization=Mathys-git \
-            -Dsonar.projectKey=mathys-key \
-            -Dsonar.coverage.jacoco.xmlReportPaths=api/target/site/jacoco/jacoco.xml
+        with:
+          args: >
+            -Dsonar.organization=MathysDelsalle
+            -Dsonar.projectKey=MathysDelsalle_project_crypto
+            -Dsonar.projectName=project_crypto
+            -Dsonar.sources=api/src/main/java,collector/src/main/java
+            -Dsonar.tests=api/src/test/java,collector/src/test/java
+            -Dsonar.java.binaries=api/target/classes,collector/target/classes
+            -Dsonar.junit.reportPaths=api/target/surefire-reports,collector/target/surefire-reports
+            -Dsonar.coverage.jacoco.xmlReportPaths=api/target/site/jacoco/jacoco.xml,collector/target/site/jacoco/jacoco.xml
+            -Dsonar.sourceEncoding=UTF-8

@@ -2,6 +2,13 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { register } from "../services/authService";
 
+/* ================== REGEX ================== */
+const PASSWORD_REGEX =
+  /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.(com|fr)$/i;
+/* =========================================== */
+
 export default function RegisterPage() {
   const navigate = useNavigate();
 
@@ -19,6 +26,19 @@ export default function RegisterPage() {
     setError("");
     setSuccess("");
 
+    // ✅ validations front (on laisse le bouton cliquable, mais on refuse au submit)
+    if (!EMAIL_REGEX.test(email)) {
+      setError("Email invalide (ex: exemple@site.com ou .fr)");
+      return;
+    }
+
+    if (!PASSWORD_REGEX.test(password)) {
+      setError(
+        "Le mot de passe doit contenir au moins 8 caractères, une majuscule, un chiffre et un caractère spécial."
+      );
+      return;
+    }
+
     if (password !== password2) {
       setError("Les mots de passe ne correspondent pas.");
       return;
@@ -30,11 +50,15 @@ export default function RegisterPage() {
       setSuccess("Compte créé ! Tu peux te connecter.");
       setTimeout(() => navigate("/login", { replace: true }), 400);
     } catch (err) {
-      setError(err?.message || "Erreur d'inscription.");
+      // ✅ récupère le format standard du back
+      setError(err?.response?.data?.message || "Erreur d'inscription.");
     } finally {
       setLoading(false);
     }
   }
+
+  const passwordWeak = password.length > 0 && !PASSWORD_REGEX.test(password);
+  const emailInvalid = email.length > 0 && !EMAIL_REGEX.test(email);
 
   return (
     <div style={styles.page}>
@@ -64,6 +88,12 @@ export default function RegisterPage() {
             required
           />
 
+          {emailInvalid ? (
+            <small style={styles.warning}>
+              Email invalide (ex: exemple@site.com ou .fr)
+            </small>
+          ) : null}
+
           <input
             style={styles.input}
             type="password"
@@ -73,6 +103,16 @@ export default function RegisterPage() {
             autoComplete="new-password"
             required
           />
+
+          <small style={styles.helper}>
+            8 caractères min • 1 majuscule • 1 chiffre • 1 caractère spécial
+          </small>
+
+          {passwordWeak ? (
+            <small style={styles.warning}>
+              Mot de passe trop faible (majuscule + chiffre + spécial, 8+)
+            </small>
+          ) : null}
 
           <input
             style={styles.input}
@@ -84,6 +124,7 @@ export default function RegisterPage() {
             required
           />
 
+          {/* ✅ bouton cliquable (seulement bloqué pendant loading) */}
           <button style={styles.button} disabled={loading}>
             {loading ? "Création..." : "Créer mon compte"}
           </button>
@@ -127,6 +168,16 @@ const styles = {
     border: "1px solid #1e293b",
     background: "#020617",
     color: "white",
+  },
+  helper: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginTop: -4,
+  },
+  warning: {
+    fontSize: 12,
+    color: "#fbbf24",
+    marginTop: -6,
   },
   button: {
     marginTop: 6,
