@@ -49,7 +49,7 @@ jobs:
         with:
           args: >
             -Dsonar.organization=mathys-key
-            -Dsonar.projectKey=project_crypto
+            -Dsonar.projectKey=MathysDesalle_project_crypto
             -Dsonar.projectName=project_crypto
             -Dsonar.sources=api/src/main/java,collector/src/main/java
             -Dsonar.tests=api/src/test/java,collector/src/test/java
