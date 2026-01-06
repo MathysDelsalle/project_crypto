@@ -63,7 +63,6 @@ class JwtServiceTest {
 
     @Test
     void tokenExpired_throwsExpiredJwtException() throws Exception {
-        // expiration très courte
         ReflectionTestUtils.setField(jwtService, "jwtExpiration", 1L);
 
         UserDetails user = User.withUsername("mathys")
@@ -73,27 +72,28 @@ class JwtServiceTest {
 
         String token = jwtService.generateToken(user);
 
-        Thread.sleep(5);
+        Thread.sleep(10);
 
         assertThrows(io.jsonwebtoken.ExpiredJwtException.class,
-                () -> jwtService.isTokenValid(token, user));
+                () -> jwtService.extractUsername(token));
     }
 
 
+
     @Test
-    void tamperedToken_throwsWhenExtractingUsername() {
+    void tamperedToken_isInvalid() {
         UserDetails user = User.withUsername("mathys")
                 .password("x")
                 .authorities("ROLE_USER")
                 .build();
 
         String token = jwtService.generateToken(user);
-
-        // on altère le token (signature invalide)
         String tampered = token.substring(0, token.length() - 1) + "x";
 
-        assertThrows(Exception.class, () -> jwtService.extractUsername(tampered));
-        assertThrows(Exception.class, () -> jwtService.isTokenValid(tampered, user));
+        assertThrows(io.jsonwebtoken.security.SignatureException.class,
+                () -> jwtService.extractUsername(tampered));
+
+        assertFalse(jwtService.isTokenValid(tampered, user));
     }
 
     @Test

@@ -1,5 +1,5 @@
-/home/mathys/Bureau/project_crypto/collector/src/test/java/collector/service/CoinGeckoCollectorServiceIT.java
 /home/mathys/Bureau/project_crypto/collector/src/test/java/collector/service/AlertCheckServiceTest.java
+/home/mathys/Bureau/project_crypto/collector/src/test/java/collector/it/CryptoPriceHistoryRepositoryIT.java
 /home/mathys/Bureau/project_crypto/collector/src/test/java/collector/service/CoinGeckoHistoryCollectorServiceTest.java
-/home/mathys/Bureau/project_crypto/collector/src/test/java/collector/repository/CryptoPriceHistoryRepositoryIT.java
+/home/mathys/Bureau/project_crypto/collector/src/test/java/collector/it/CoinGeckoCollectorServiceIT.java
 /home/mathys/Bureau/project_crypto/collector/src/test/java/collector/service/CoinGeckoCollectorServiceTest.java
