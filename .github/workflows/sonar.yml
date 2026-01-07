@@ -51,6 +51,7 @@ jobs:
             -Dsonar.organization=mathys-key
             -Dsonar.projectKey=MathysDelsalle_project_crypto
             -Dsonar.projectName=project_crypto
+            -Dsonar.coverage.exclusions=**/dto/**,**/model/**,**/config/**,**/exception/**,**/repository/**,**/exception/**,**/scheduler/**
             -Dsonar.sources=api/src/main/java,collector/src/main/java
             -Dsonar.tests=api/src/test/java,collector/src/test/java
             -Dsonar.java.binaries=api/target/classes,collector/target/classes
