@@ -1,0 +1,99 @@
+############################
+# OS / Editor
+############################
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.bak
+*.orig
+*~
+.idea/
+.vscode/
+*.iml
+
+############################
+# Logs
+############################
+*.log
+logs/
+log/
+
+############################
+# Java / Maven
+############################
+target/
+**/target/
+*.class
+
+# Maven wrapper
+.mvn/wrapper/maven-wrapper.jar
+
+############################
+# Node / npm (si présent)
+############################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+############################
+# Docker
+############################
+*.pid
+docker-compose.override.yml
+
+############################
+# k6 / Perf tests
+############################
+perf-results/
+perf-results/**
+*.har
+
+# k6 outputs (if redirected elsewhere)
+results.json
+summary.json
+summary.pretty.json
+report.html
+
+############################
+# Coverage / Reports
+############################
+coverage/
+jacoco/
+**/jacoco/
+**/jacoco.exec
+**/jacoco.xml
+**/jacoco.csv
+
+############################
+# Build artifacts / archives
+############################
+*.jar
+*.war
+*.ear
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+############################
+# Environment / secrets
+############################
+.env
+.env.*
+!.env.example
+
+############################
+# Temporary files
+############################
+tmp/
+temp/
+.cache/
+
+############################
+# Git
+############################
+*.orig
+*.rej

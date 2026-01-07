@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: collector.service.CoinGeckoHistoryCollectorServiceTest
--------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.883 s -- in collector.service.CoinGeckoHistoryCollectorServiceTest
