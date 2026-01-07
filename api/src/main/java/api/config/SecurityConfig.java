@@ -45,6 +45,9 @@ public class SecurityConfig {
                 // Admin
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
+                // Actuator health endpoint PUBLIC
+                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+
                 // Le reste protégé
                 .anyRequest().authenticated()
             )

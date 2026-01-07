@@ -33,3 +33,15 @@ app:
 coingecko:
   api:
     url: ${COINGECKO_API_URL:https://api.coingecko.com/api/v3}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+

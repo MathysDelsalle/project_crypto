@@ -59,18 +59,17 @@ services:
     env_file:
       - .env
     environment:
+      SERVER_PORT: 8081
       COINGECKO_API_URL: ${COINGECKO_API_URL}
       SPRING_DATASOURCE_URL: jdbc:postgresql://bd:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
 
-      # ✅ Variables Spring direct => crée spring.mail.host/port/user/pass automatiquement
       SPRING_MAIL_HOST: ${MAIL_HOST}
       SPRING_MAIL_PORT: ${MAIL_PORT}
       SPRING_MAIL_USERNAME: ${MAIL_USERNAME}
       SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
 
-      # ✅ Variables pour tes propriétés custom
       APP_MAIL_FROM: ${MAIL_FROM}
       APP_MAIL_FRONTENDURL: ${FRONTEND_URL}
     depends_on:
@@ -78,6 +77,10 @@ services:
         condition: service_healthy
       api:
         condition: service_started
+    ports:
+    - "127.0.0.1:8081:8081"
+
+
 
 volumes:
   db_data:
