@@ -124,6 +124,7 @@ perf-prune:
 # --------------------------
 start:
 	minikube start
+	kubectl create namespace project-crypto
 	kubectl apply -f k8s/
 
 stop:
