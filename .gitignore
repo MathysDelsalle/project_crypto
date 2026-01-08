@@ -97,3 +97,17 @@ temp/
 ############################
 *.orig
 *.rej
+
+############################
+# Zap file
+############################
+zap-report*.html
+
+# Secrets Kubernetes
+**/*secret*.yaml
+**/*secrets*.yaml
+.env
+.env.*
+*.pem
+*.key
+*.crt

@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"api","namespace":"project-crypto"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"api"}},"template":{"metadata":{"labels":{"app":"api"}},"spec":{"containers":[{"env":[{"name":"SERVER_PORT","value":"8080"},{"name":"SPRING_DATASOURCE_URL","value":"jdbc:postgresql://postgres:5432/crypto_db"},{"name":"SPRING_DATASOURCE_USERNAME","value":"crypto_user"},{"name":"SPRING_DATASOURCE_PASSWORD","valueFrom":{"secretKeyRef":{"key":"POSTGRES_PASSWORD","name":"postgres-secret"}}},{"name":"SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT","value":"org.hibernate.dialect.PostgreSQLDialect"},{"name":"JWT_SECRET","valueFrom":{"secretKeyRef":{"key":"JWT_SECRET","name":"app-secrets"}}},{"name":"JWT_EXPIRATION","valueFrom":{"configMapKeyRef":{"key":"JWT_EXPIRATION","name":"app-config"}}},{"name":"ADMIN_USERNAME","value":"admin"},{"name":"ADMIN_PASSWORD","value":"admin1"},{"name":"ADMIN_EMAIL","value":"admin@example.com"}],"image":"project-crypto-api:latest","imagePullPolicy":"IfNotPresent","livenessProbe":{"httpGet":{"path":"/actuator/health","port":8080},"initialDelaySeconds":40,"periodSeconds":20},"name":"api","ports":[{"containerPort":8080}],"readinessProbe":{"httpGet":{"path":"/actuator/health","port":8080},"initialDelaySeconds":15,"periodSeconds":10}}]}}}}
+
+      '
+  name: api
+  namespace: project-crypto
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: api
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: '2026-01-08T01:35:41+01:00'
+      labels:
+        app: api
+    spec:
+      containers:
+        - env:
+            - name: SERVER_PORT
+              value: '8080'
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres:5432/crypto_db
+            - name: SPRING_DATASOURCE_USERNAME
+              value: crypto_user
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: POSTGRES_PASSWORD
+                  name: postgres-secret
+            - name: SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT
+              value: org.hibernate.dialect.PostgreSQLDialect
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: JWT_SECRET
+                  name: app-secrets
+            - name: JWT_EXPIRATION
+              valueFrom:
+                configMapKeyRef:
+                  key: JWT_EXPIRATION
+                  name: app-config
+            - name: ADMIN_USERNAME
+              value: admin
+            - name: ADMIN_PASSWORD
+              value: admin1
+            - name: ADMIN_EMAIL
+              value: admin@example.com
+          image: project-crypto-api:latest
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 40
+            periodSeconds: 20
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: api
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30

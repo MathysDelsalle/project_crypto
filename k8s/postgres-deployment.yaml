@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"postgres","namespace":"project-crypto"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"postgres"}},"template":{"metadata":{"labels":{"app":"postgres"}},"spec":{"containers":[{"envFrom":[{"secretRef":{"name":"postgres-secret"}}],"image":"postgres:16","name":"postgres","ports":[{"containerPort":5432}],"volumeMounts":[{"mountPath":"/var/lib/postgresql/data","name":"data"},{"mountPath":"/docker-entrypoint-initdb.d","name":"init","readOnly":true}]}],"volumes":[{"name":"data","persistentVolumeClaim":{"claimName":"postgres-pvc"}},{"configMap":{"items":[{"key":"init.sql","path":"init.sql"}],"name":"postgres-init"},"name":"init"}]}}}}
+
+      '
+  name: postgres
+  namespace: project-crypto
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: postgres
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - envFrom:
+            - secretRef:
+                name: postgres-secret
+          image: postgres:16
+          imagePullPolicy: IfNotPresent
+          name: postgres
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: data
+            - mountPath: /docker-entrypoint-initdb.d
+              name: init
+              readOnly: true
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+        - configMap:
+            defaultMode: 420
+            items:
+              - key: init.sql
+                path: init.sql
+            name: postgres-init
+          name: init
