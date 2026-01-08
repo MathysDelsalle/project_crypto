@@ -77,7 +77,7 @@ export function apiScenario() {
     "API is array": (r) => {
       try {
         return Array.isArray(r.json());
-      } catch {
+      } catch (e) {
         return false;
       }
     },

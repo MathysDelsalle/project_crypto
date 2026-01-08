@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-files
+  namespace: project-crypto
+data:
+  spring-boot.json: |
+    {
+      "title": "Spring Boot (Micrometer)",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "panels": []
+    }

@@ -1,0 +1,29 @@
+grafana:
+  enabled: false
+
+alertmanager:
+  enabled: false
+
+prometheus:
+  enabled: true
+
+  # UI Prometheus via Ingress
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - prometheus.local
+    paths:
+      - /
+    pathType: Prefix
+
+  prometheusSpec:
+    # IMPORTANT : permet de prendre en compte les ServiceMonitor
+    # créés hors du namespace "monitoring" (ex: project-crypto)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+
+    podMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelector: {}
+    podMonitorNamespaceSelector: {}

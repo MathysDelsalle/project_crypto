@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-steps
+  namespace: project-crypto
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      volumes:
+        - name: k6-scripts
+          configMap:
+            name: k6-scripts
+        - name: reports-pvc
+          persistentVolumeClaim:
+            claimName: test-reports-pvc
+      containers:
+        - name: k6
+          image: grafana/k6:0.50.0
+          volumeMounts:
+            - name: k6-scripts
+              mountPath: /scripts
+            - name: reports-pvc
+              mountPath: /reports
+          env:
+            - name: RUN_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+          command: ["/bin/sh","-lc"]
+          args:
+            - |
+              set -e
+              TS="$(date +%Y%m%d_%H%M%S)"
+              OUT_DIR="/reports/perf/${TS}_steps"
+              mkdir -p "$OUT_DIR"
+              echo "Writing to $OUT_DIR"
+              k6 run /scripts/perf-load-stress-steps.js \
+                --summary-export "$OUT_DIR/summary.json" \
+                | tee "$OUT_DIR/output.log"
+              echo "Done."

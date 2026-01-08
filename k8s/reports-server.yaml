@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: reports-nginx-conf
+  namespace: project-crypto
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      server_name _;
+
+      # On sert /reports depuis le PVC
+      location / {
+        root /usr/share/nginx/html;
+        autoindex on;
+        autoindex_exact_size off;
+        autoindex_localtime on;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reports
+  namespace: project-crypto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reports
+  template:
+    metadata:
+      labels:
+        app: reports
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            - name: reports-pvc
+              mountPath: /usr/share/nginx/html/reports
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+      volumes:
+        - name: reports-pvc
+          persistentVolumeClaim:
+            claimName: test-reports-pvc
+        - name: nginx-conf
+          configMap:
+            name: reports-nginx-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reports
+  namespace: project-crypto
+spec:
+  selector:
+    app: reports
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: reports
+  namespace: project-crypto
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: reports.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: reports
+                port:
+                  number: 80

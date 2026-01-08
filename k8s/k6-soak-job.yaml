@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-soak
+  namespace: project-crypto
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      volumes:
+        - name: k6-scripts
+          configMap:
+            name: k6-scripts
+        - name: reports-pvc
+          persistentVolumeClaim:
+            claimName: test-reports-pvc
+      containers:
+        - name: k6
+          image: grafana/k6:0.50.0
+          volumeMounts:
+            - name: k6-scripts
+              mountPath: /scripts
+            - name: reports-pvc
+              mountPath: /reports
+          command: ["/bin/sh","-lc"]
+          args:
+            - |
+              set -e
+              TS="$(date +%Y%m%d_%H%M%S)"
+              OUT_DIR="/reports/perf/${TS}_soak"
+              mkdir -p "$OUT_DIR"
+              echo "Writing to $OUT_DIR"
+              k6 run /scripts/perf-soak-30m.js \
+                --summary-export "$OUT_DIR/summary.json" \
+                | tee "$OUT_DIR/output.log"
+              echo "Done."
