@@ -33,7 +33,7 @@ spec:
               protocol: TCP
           env:
             - name: VITE_API_BASE_URL
-              value: "http://api.crypto.local/api"
+              value: "https://api.crypto.local/api"
           resources: {}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File

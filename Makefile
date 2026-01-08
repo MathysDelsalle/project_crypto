@@ -1,7 +1,8 @@
 .PHONY: test test-api test-collector \
         up down logs \
         perf perf-clean perf-wait perf-steps perf-soak perf-prune \
-        start stop status logs-api logs-front logs-collector
+        start stop status logs-api logs-front logs-collector \
+        mk-docker-env build-k8s deploy restart wait images reset
 
 # --------------------------
 # Perf config
@@ -17,11 +18,28 @@ STEP_DURATION ?= 2m
 SOAK_RPS ?= 150
 KEEP ?= 10
 
-API_URL := http://api.crypto.local
-FRONT_URL := http://front.crypto.local
+API_URL := https://api.crypto.local
+FRONT_URL := https://front.crypto.local
 COLLECTOR_URL := http://collector.crypto.local
 
 K6_IMAGE := grafana/k6:latest
+
+# --------------------------
+# Kubernetes / Minikube config
+# --------------------------
+NAMESPACE := project-crypto
+K8S_DIR := k8s
+
+# Images (DOIVENT matcher exactement les champs "image:" dans tes YAML k8s)
+API_IMAGE ?= project-crypto-api:latest
+FRONT_IMAGE ?= project-crypto-front:latest
+COLLECTOR_IMAGE ?= project-crypto-collector:latest
+
+
+# Build contexts (dossiers contenant les Dockerfile)
+API_DIR ?= api
+FRONT_DIR ?= front
+COLLECTOR_DIR ?= collector
 
 # --------------------------
 # Tests (unit + integ) Maven
@@ -122,22 +140,61 @@ perf-prune:
 # --------------------------
 # Kubernetes / Minikube helpers
 # --------------------------
+
+# Affiche l'environnement docker de minikube (info)
+mk-docker-env:
+	@echo "🔧 Using minikube docker daemon:"
+	@minikube -p minikube docker-env
+
+# Build des images dans le Docker de Minikube (résout ImagePullBackOff en dev)
+build:
+	@echo "🔨 Building images inside minikube..."
+	@bash -lc 'eval "$$(minikube -p minikube docker-env)" && \
+	  docker build -t "$(API_IMAGE)" "$(API_DIR)" && \
+	  docker build -t "$(FRONT_IMAGE)" "$(FRONT_DIR)" && \
+	  docker build -t "$(COLLECTOR_IMAGE)" "$(COLLECTOR_DIR)"'
+
+# Applique les manifests k8s (crée le namespace si besoin)
+deploy:
+	@kubectl get namespace $(NAMESPACE) >/dev/null 2>&1 || kubectl create namespace $(NAMESPACE)
+	kubectl apply -f $(K8S_DIR)/
+
+# Restart les deployments (utile après rebuild)
+restart:
+	kubectl rollout restart deploy -n $(NAMESPACE)
+
+# Attend que les rollouts soient OK
+wait:
+	kubectl rollout status deploy/api -n $(NAMESPACE) --timeout=180s
+	kubectl rollout status deploy/front -n $(NAMESPACE) --timeout=180s
+	kubectl rollout status deploy/collector -n $(NAMESPACE) --timeout=180s
+
+# Affiche les images présentes DANS minikube
+images:
+	@bash -lc 'eval "$$(minikube -p minikube docker-env)" && docker images | head -n 50'
+
+# Supprime le namespace (reset "soft" côté k8s, sans supprimer minikube)
+reset:
+	kubectl delete namespace $(NAMESPACE) --ignore-not-found
+
+# Démarrage complet: minikube + build images + apply + restart + wait
 start:
 	minikube start
-	kubectl create namespace project-crypto
-	kubectl apply -f k8s/
+	$(MAKE) deploy
+	$(MAKE) restart
+	$(MAKE) wait
 
 stop:
 	minikube stop
 
 status:
-	kubectl get pods -n project-crypto
+	kubectl get pods -n $(NAMESPACE)
 
 logs-api:
-	kubectl -n project-crypto logs deploy/api -f
+	kubectl -n $(NAMESPACE) logs deploy/api -f
 
 logs-front:
-	kubectl -n project-crypto logs deploy/front -f
+	kubectl -n $(NAMESPACE) logs deploy/front -f
 
 logs-collector:
-	kubectl -n project-crypto logs deploy/collector -f
+	kubectl -n $(NAMESPACE) logs deploy/collector -f

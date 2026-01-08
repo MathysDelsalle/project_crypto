@@ -1,5 +1,12 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+console.log("API =", API_BASE_URL);
+
+
+if (!API_BASE_URL) {
+  throw new Error("VITE_API_BASE_URL is not defined");
+}
+
 
 const STORAGE = {
   token: "auth_token",

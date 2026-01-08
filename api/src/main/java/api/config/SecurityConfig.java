@@ -81,7 +81,8 @@ public class SecurityConfig {
         // ✅ Autorise localhost + ingress (*.crypto.local)
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
-                "http://*.crypto.local"
+                "http://*.crypto.local",
+                "https://*.crypto.local"
         ));
 
         // ✅ Méthodes autorisées
@@ -91,6 +92,8 @@ public class SecurityConfig {
 
         // ✅ Headers (important pour éviter des blocages silencieux)
         configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+
 
         // ✅ Headers exposés au frontend
         configuration.setExposedHeaders(List.of("Authorization"));
