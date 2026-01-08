@@ -198,3 +198,13 @@ logs-front:
 
 logs-collector:
 	kubectl -n $(NAMESPACE) logs deploy/collector -f
+
+bootstrap:
+	kubectl apply -f k8s/namespace.yaml || true
+	kubectl apply -f k8s/configmaps/
+	kubectl create secret generic postgres-secret \
+	  --from-env-file=postgres.env \
+	  --dry-run=client -o yaml | kubectl apply -f -
+	kubectl create secret generic app-secrets \
+	  --from-env-file=app.env \
+	  --dry-run=client -o yaml | kubectl apply -f -

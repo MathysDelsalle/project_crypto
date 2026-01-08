@@ -5,6 +5,12 @@ metadata:
   namespace: project-crypto
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.crypto.local
+        - front.crypto.local
+        - collector.crypto.local
+      secretName: crypto-local-tls
   rules:
     - host: api.crypto.local
       http:

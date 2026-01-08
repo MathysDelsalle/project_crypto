@@ -92,7 +92,6 @@ public class SecurityConfig {
 
         // ✅ Headers (important pour éviter des blocages silencieux)
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
 
 
         // ✅ Headers exposés au frontend
