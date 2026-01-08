@@ -111,3 +111,5 @@ zap-report*.html
 *.pem
 *.key
 *.crt
+
+minikube-linux-amd64
